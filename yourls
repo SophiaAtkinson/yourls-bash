@@ -1,69 +1,100 @@
 #!/usr/bin/env bash
 
-# Configure these 2 lines and leave the rest
+# Default configuration
 YOURLS_HOST="https://sho.rt/"
-YOURLS_KEY="eb9444558f" # see sho.rt/admin/tools.php
+YOURLS_API_PATH="yourls-api.php"
+YOURLS_KEY="" # Replace with your YOURLS key if you have one
 
+# Function to display help information
 yourls_help() {
-    echo "Shorten URLs with YOURLS"
-    echo
-    echo "Usage:"
-    echo "  ${0##*/} <url>"
-    echo "  ${0##*/} <url> -k <KEYWORD> -t <TITLE> -f <FORMAT>"
-    echo "  ${0##*/} <url> --help"
-    echo
-    echo "Options:"
-    echo "  -h | --help                Show this screen"
-    echo "  -k | --keyword <KEYWORD>   Custom keyword"
-    echo "  -t | --title <TITLE>       Custom title"
-    echo "  -f | --format <FORMAT>     Ouput format (json, xml, simple)"
+    cat << EOF
+Shorten URLs with YOURLS
+
+Usage:
+  ${0##*/} <url>
+  ${0##*/} <url> -k <keyword> -t <title> -f <format> [--api-path <path>] [--api-key <key>]
+  ${0##*/} <url> --help
+
+Options:
+  -h, --help                    Show this help message and exit
+  -k, --keyword <keyword>       Set a custom keyword
+  -t, --title <title>           Set a custom title
+  -f, --format <format>         Set output format (json, xml, simple)
+      --api-path <path>         Set custom API path (default: yourls-api.php)
+      --api-key <key>           Set custom API key (if needed)
+EOF
     exit 1
 }
 
-# If no param or param is -h|--help
-if [ -z "$1" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+# Check if no parameter is passed or if help option is provided
+if [[ -z "$1" || "$1" == "--help" || "$1" == "-h" ]]; then
     yourls_help
 fi
 
-# Assuming first parameter is the URL
-URL=$1;
-shift;
+# Initialize variables
+URL=""
+KEYWORD=""
+TITLE=""
+FORMAT="simple"
 
-POSITIONAL=()
-while [[ $# -gt 0 ]]
-do
-    key="$1"
-    case $key in
+# Parse command line options
+while [[ $# -gt 0 ]]; do
+    case $1 in
         -k|--keyword)
-        KEYWORD="$2"
-        shift # argument
-        shift # value
-        ;;
+            KEYWORD="$2"
+            shift 2
+            ;;
         -t|--title)
-        TITLE="$2"
-        shift # argument
-        shift # value
-        ;;
+            TITLE="$2"
+            shift 2
+            ;;
         -f|--format)
-        FORMAT="$2"
-        shift # argument
-        shift # value
-        ;;
-        -h|--help)
-        yourls_help
-        exit 1
-        ;;
-        *)    # unknown option
-        echo "${0##*/}: unknown option $1"
-        echo "Try '${0##*/} --help' for more information."
-        exit 1
-        ;;
+            FORMAT="$2"
+            shift 2
+            ;;
+        --api-path)
+            YOURLS_API_PATH="$2"
+            shift 2
+            ;;
+        --api-key)
+            YOURLS_KEY="$2"
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            URL="$1"
+            shift
+            ;;
     esac
 done
 
-if [ -z "$FORMAT" ]; then
+# Check if URL is provided
+if [[ -z "$URL" ]]; then
+    echo "Error: URL is required."
+    yourls_help
+fi
+
+# Set default format if not provided
+if [[ -z "$FORMAT" ]]; then
     FORMAT="simple"
 fi
 
-curl -s "$YOURLS_HOST/yourls-api.php?signature=$YOURLS_KEY&action=shorturl&url=$URL&keyword=$KEYWORD&title=$TITLE&format=$FORMAT"
+# Construct the API URL
+API_URL="${YOURLS_HOST}${YOURLS_API_PATH}"
 
+# Make API call to shorten URL if YOURLS_KEY is provided
+if [[ -n "$YOURLS_KEY" ]]; then
+    RESPONSE=$(curl --fail --silent "${API_URL}?signature=${YOURLS_KEY}&action=shorturl&url=${URL}&keyword=${KEYWORD}&title=${TITLE}&format=${FORMAT}")
+else
+    RESPONSE=$(curl --fail --silent "${API_URL}?action=shorturl&url=${URL}&keyword=${KEYWORD}&title=${TITLE}&format=${FORMAT}")
+fi
+
+# Check for HTML response
+if [[ "$RESPONSE" == *"<html"* ]]; then
+    echo "Too Many Requests! Slow down please."
+elif [[ -n "$RESPONSE" ]]; then
+    echo "$RESPONSE"
+fi
