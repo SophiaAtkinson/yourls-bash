@@ -7,9 +7,9 @@ A simple bash script to shorten URLs with [YOURLS](https://yourls.org)
 
 ```shell
 # using wget
-$> wget -q https://raw.githubusercontent.com/ozh/yourls-bash/master/yourls
+$> wget -q https://raw.githubusercontent.com/SophiaAtkinson/yourls-bash/master/yourls
 # using curl
-$> curl -s -o yourls https://raw.githubusercontent.com/ozh/yourls-bash/master/yourls
+$> curl -s -o yourls https://raw.githubusercontent.com/SophiaAtkinson/yourls-bash/master/yourls
 ```
 
 Then, edit the two parameters at the beginning of the script (`YOURLS_HOST` and `YOURLS_KEY`) to match your setup.
